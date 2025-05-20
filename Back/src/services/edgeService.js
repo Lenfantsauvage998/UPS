@@ -5,7 +5,7 @@ export const fecthAllEdges = () =>
     Edge.find().populate('from to').lean();
 
 // Crear arista 
-export const createEdga = ({from,to,weight}) => {
+export const createEdge = ({from,to,weight}) => {
     const edge = new Edge({from,to,weight})
     return edge.save();
 }

@@ -1,5 +1,5 @@
-import { fetchAllNodes } from './nodeService';
-import { fetchAllEdges } from './edgeService';
+import { fectchAllNodes } from './nodeService.js';
+import { fecthAllEdges } from './edgeService.js';
 
 /**
  * Construye la lista de adyacencia:

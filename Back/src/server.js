@@ -1,6 +1,6 @@
 import app from './app.js'
 import { configDotenv } from 'dotenv';
-import { connectDB } from './src/database/mongoose.js';
+import { connectDB } from "./database/mongoose.js";
 
 connectDB();
 
