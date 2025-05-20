@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Waze Mini</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Leaflet CSS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    crossorigin=""
+  />
+
+  <!-- Google Fonts -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+    rel="stylesheet"
+  />
+
+  <style>
+    /* Reset & layout */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: 'Roboto', sans-serif;
+      background: #f0f2f5;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      background: #3b5998;
+      color: white;
+      padding: 1rem;
+      text-align: center;
+      font-size: 1.5rem;
+      font-weight: 500;
+    }
+    main {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* Panel lateral */
+    .panel {
+      width: 300px;
+      background: white;
+      padding: 1rem;
+      border-right: 1px solid #ddd;
+      overflow-y: auto;
+    }
+    .panel h2 {
+      margin-bottom: 0.75rem;
+      color: #3b5998;
+    }
+    .panel form {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+    .panel form input,
+    .panel form button {
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 0.95rem;
+    }
+    .panel form button {
+      background: #3b5998;
+      color: white;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: background 0.2s;
+    }
+    .panel form button:hover {
+      background: #334d84;
+    }
+    .node-list {
+      list-style: none;
+    }
+    .node-list li {
+      padding: 0.5rem;
+      margin-bottom: 0.5rem;
+      background: #fafafa;
+      border: 1px solid #eee;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+
+    /* Contenedor de mapa */
+    .map-container {
+      flex: 1;
+      position: relative;
+    }
+    #map {
+      position: absolute;
+      inset: 0;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      main {
+        flex-direction: column;
+      }
+      .panel {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid #ddd;
+      }
+      #map { height: 300px; }
+    }
+  </style>
+</head>
+<body>
+  <header>Waze Mini</header>
+  <main>
+    <aside class="panel">
+      <h2>Crear Nodo</h2>
+      <form id="nodeForm">
+        <!-- Cambiado id a nodeName para evitar colisiones -->
+        <input type="text" id="nodeName" name="name" placeholder="Nombre" required />
+        <input type="number" id="lat" name="latitude" placeholder="Latitud" value="4.7110" step="0.0001" required />
+        <input type="number" id="lng" name="longitude" placeholder="Longitud" value="-74.0721" step="0.0001" required />
+        <button type="submit" style="grid-column: 1 / -1;">Agregar Nodo</button>
+      </form>
+
+      <h2>Lista de Nodos</h2>
+      <ul id="nodeList" class="node-list"></ul>
+    </aside>
+
+    <section class="map-container">
+      <div id="map"></div>
+    </section>
+  </main>
+
+  <!-- Leaflet JS -->
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    crossorigin=""
+  ></script>
+
+  <script>
+    const apiUrl = '/api/nodes';
+    let map, markers = [];
+
+    function initMap() {
+      map = L.map('map').setView([4.7110, -74.0721], 12);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
+
+      // Clic en mapa genera prompt y crea nodo
+      map.on('click', async e => {
+        const promptName = prompt('Nombre para nuevo nodo:');
+        if (!promptName) return;
+        const { lat, lng } = e.latlng;
+        console.log('🛫 POST desde mapa:', { name: promptName, latitude: lat, longitude: lng });
+        try {
+          const res = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type':'application/json' },
+            body: JSON.stringify({ name: promptName, latitude: lat, longitude: lng })
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || `Status ${res.status}`);
+          }
+          loadNodes();
+        } catch (err) {
+          alert('Error creando nodo: ' + err.message);
+          console.error(err);
+        }
+      });
+    }
+
+    function drawNodes(nodes) {
+      markers.forEach(m => map.removeLayer(m));
+      markers = [];
+      nodes.forEach(n => {
+        const m = L.marker([n.latitude, n.longitude])
+          .addTo(map)
+          .bindPopup(`<strong>${n.name}</strong><br/>(${n.latitude}, ${n.longitude})`);
+        markers.push(m);
+      });
+    }
+
+    async function loadNodes() {
+      try {
+        const res = await fetch(apiUrl);
+        if (!res.ok) throw new Error('Error cargando nodos');
+        const nodes = await res.json();
+        document.getElementById('nodeList').innerHTML =
+          nodes.map(n => `<li>${n.name}<br/><small>${n.latitude}, ${n.longitude}</small></li>`).join('');
+        drawNodes(nodes);
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    document.getElementById('nodeForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const name = document.getElementById('nodeName').value.trim();
+      const lat  = parseFloat(document.getElementById('lat').value);
+      const lng  = parseFloat(document.getElementById('lng').value);
+
+      console.log('🛫 POST desde formulario:', { name, latitude: lat, longitude: lng });
+
+      if (!name) {
+        alert('El nombre no puede quedar vacío');
+        return;
+      }
+
+      try {
+        const res = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type':'application/json' },
+          body: JSON.stringify({ name, latitude: lat, longitude: lng })
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || `Status ${res.status}`);
+        }
+        e.target.reset();
+        loadNodes();
+      } catch (err) {
+        alert('Error creando nodo: ' + err.message);
+        console.error(err);
+      }
+    });
+
+    // Inicialización
+    window.addEventListener('load', () => {
+      initMap();
+      loadNodes();
+    });
+  </script>
+</body>
+</html>

@@ -1,87 +1,144 @@
-/**
- * @swagger
- * tags:
- *   - name: Routes
- *     description: Endpoints de conectividad y ruta óptima
- *
- * components:
- *   schemas:
- *     Connectivity:
- *       type: object
- *       properties:
- *         connected:
- *           type: boolean
- *           description: Indica si el grafo es completamente conexo
- *           example: true
- *
- *     ShortestPath:
- *       type: object
- *       properties:
- *         path:
- *           type: array
- *           description: Listado de IDs de nodos que forman la ruta óptima
- *           items:
- *             type: string
- *           example: ['60f7c2b4a2e4f81234567891','60f7c2b4a2e4f81234567892']
- *         distance:
- *           type: number
- *           nullable: true
- *           description: Distancia total de la ruta. Null si no hay ruta válida
- *           example: 12.5
- */
-
-import { Router } from 'express';
-import { checkConnectivity, getShortestPath } from '../controllers/routeController.js';
+// src/routes/nodeRoutes.js
+import { Router } from "express";
+import {
+  getAllNodes,
+  getNode,
+  createNewNode,
+  editNode,
+  removeNode
+} from "../controllers/nodeController.js";
+import { validateBody } from "../middleware/validateRequest.js";
+import { nodeSchema } from "../middleware/schemas.js";
 
 const router = Router();
 
 /**
  * @swagger
- * /api/route/connectivity:
+ * /api/nodes:
  *   get:
- *     summary: Verifica la conectividad del grafo
- *     tags: [Routes]
- *     description: Comprueba si desde algún nodo se puede alcanzar a todos los demás nodos en el grafo.
+ *     summary: Lista todos los nodos
+ *     tags: [Nodes]
  *     responses:
  *       200:
- *         description: Resultado de la verificación de conectividad
+ *         description: Array de nodos
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Connectivity'
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Node'
  */
-router.get('/connectivity', checkConnectivity);
+router.get("/", getAllNodes);
 
 /**
  * @swagger
- * /api/route/shortest:
+ * /api/nodes/{id}:
  *   get:
- *     summary: Calcula la ruta más corta entre dos nodos
- *     tags: [Routes]
- *     description: Retorna el camino óptimo y su distancia entre los nodos de inicio y fin proporcionados.
+ *     summary: Obtiene un nodo por su ID
+ *     tags: [Nodes]
  *     parameters:
- *       - in: query
- *         name: start
+ *       - in: path
+ *         name: id
+ *         required: true
  *         schema:
  *           type: string
- *         required: true
- *         description: ID del nodo de inicio
- *       - in: query
- *         name: end
- *         schema:
- *           type: string
- *         required: true
- *         description: ID del nodo de destino
+ *         description: ID del nodo a recuperar
  *     responses:
  *       200:
- *         description: Objeto con la ruta y la distancia calculadas
+ *         description: Nodo encontrado
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ShortestPath'
- *       400:
- *         description: Parámetros 'start' o 'end' faltantes o inválidos
+ *               $ref: '#/components/schemas/Node'
+ *       404:
+ *         description: No se encontró un nodo con ese ID
  */
-router.get('/shortest', getShortestPath);
+router.get("/:id", getNode);
+
+/**
+ * @swagger
+ * /api/nodes:
+ *   post:
+ *     summary: Crea un nuevo nodo
+ *     tags: [Nodes]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/NodeInput'
+ *     responses:
+ *       201:
+ *         description: Nodo creado exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Node'
+ *       400:
+ *         description: Error de validación de datos
+ */
+router.post(
+  "/", 
+  validateBody(nodeSchema),   // ← habilitamos validación Joi antes de Mongoose
+  createNewNode
+);
+
+/**
+ * @swagger
+ * /api/nodes/{id}:
+ *   put:
+ *     summary: Actualiza un nodo existente
+ *     tags: [Nodes]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID del nodo a actualizar
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/NodeInput'
+ *     responses:
+ *       200:
+ *         description: Nodo actualizado con éxito
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Node'
+ *       400:
+ *         description: Error de validación de datos
+ *       404:
+ *         description: No se encontró un nodo con ese ID
+ */
+router.put(
+  "/:id",
+  validateBody(nodeSchema),
+  editNode
+);
+
+/**
+ * @swagger
+ * /api/nodes/{id}:
+ *   delete:
+ *     summary: Elimina un nodo por su ID
+ *     tags: [Nodes]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID del nodo a eliminar
+ *     responses:
+ *       204:
+ *         description: Eliminación exitosa (sin contenido)
+ *       404:
+ *         description: No se encontró un nodo con ese ID
+ */
+router.delete("/:id", removeNode);
 
 export default router;

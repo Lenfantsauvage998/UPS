@@ -1,3 +1,5 @@
+// src/routes/nodeRoutes.js
+
 /**
  * @swagger
  * tags:
@@ -132,7 +134,7 @@ router.get("/:id", getNode);
  */
 router.post(
   "/",
-  validateBody(nodeSchema),
+  // validateBody(nodeSchema),
   createNewNode
 );
 

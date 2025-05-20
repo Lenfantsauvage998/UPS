@@ -1,51 +1,62 @@
-import express from "express";
+// src/app.js
+import express from 'express';
 import cors from 'cors';
-// import { connectDB } from "./database/mongoose.js";
+import path from 'path';
+import { fileURLToPath } from 'url';
+import swaggerUi from 'swagger-ui-express';
+import swaggerJSDoc from 'swagger-jsdoc';
+
 import nodeRoutes from './routes/nodeRoutes.js';
 import edgeRoutes from './routes/edgeRoutes.js';
 import routeRoutes from './routes/routeRoutes.js';
 import errorHandler from './middleware/errorHandler.js';
-import swaggerUi from 'swagger-ui-express';
-import swaggerJSDoc from 'swagger-jsdoc';
 
-const app1 = express();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname  = path.dirname(__filename);
 
-// 2) Habilita CORS para todo origen (o configúralo como necesites)
-app1.use(cors({
-  origin: '*' ,            // permite cualquier origen
+const app = express();
+
+// 1) Servir front estático desde /public
+app.use(express.static(path.join(__dirname, '../public')));
+
+// 2) Middlewares globales
+app.use(cors({
+  origin: '*',
   methods: ['GET','POST','PUT','DELETE','OPTIONS'],
   allowedHeaders: ['Content-Type','Authorization']
 }));
+app.use(express.json());
 
+// 3) Swagger setup
 const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
     info: {
       title: 'UPS Navigation API',
       version: '1.0.0',
-      description: 'API para gestión de nodos y cálculo de rutas óptimas'
+      description: 'Documentación de la API de navegación'
     },
     servers: [
-      { url: 'http://localhost:8080', description: 'Servidor local' }
+      { url: 'http://localhost:3000', description: 'Servidor local' }
     ]
   },
-  apis: ['./src/routes/*.js']  // aquí Swagger lee tus comentarios JSDoc
+  apis: ['./src/routes/*.js']
 };
-
 const swaggerSpec = swaggerJSDoc(swaggerOptions);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// Documentación Swagger
-app1.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+// 4) Rutas de la API
+app.use('/api/nodes', nodeRoutes);
+app.use('/api/edges', edgeRoutes);
+app.use('/api/route', routeRoutes);
 
-app1.use(errorHandler)
-app1.use(express.json());
+// 5) Manejador central de errores
+app.use(errorHandler);
 
-app1.use('/api/nodes', nodeRoutes);
-app1.use('/api/edges', edgeRoutes);
-app1.use('/api/route', routeRoutes);
+// 6) Fallback para rutas no-API (SPA)
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api')) return next();
+  res.sendFile(path.join(__dirname, '../public/index.html'));
+});
 
-// app1.use(errorHandler)
-
-export default app1
-
-
+export default app;
