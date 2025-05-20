@@ -1,20 +1,20 @@
-import { app1 , expressJson1 } from './app.js'
+import app from './app.js'
 import { configDotenv } from 'dotenv';
+import { connectDB } from './src/database/mongoose.js';
+
+connectDB();
 
 configDotenv();
 
-const app = app1
-
-const expressJson = expressJson1
+const app1 = app
 
 const PORT = process.env.PORT || 3000;
 
-app.use(expressJson);
 
-app.get('/', (req, res) => {
+app1.get('/', (req, res) => {
   res.json({ message: '✅ API funcionando solo mia :DDD' });
 });
 
-app.listen(PORT, () => {
+app1.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
 });
