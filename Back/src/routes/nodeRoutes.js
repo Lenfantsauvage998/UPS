@@ -3,7 +3,7 @@ import { getAllNodes , getNode , createNewNode , editNode , removeNode   } from 
 import { get } from "mongoose";
 import { validateBody } from '../middleware/validateRequest.js';
 import { nodeSchema }   from '../middleware/schemas.js';
-import { createNewNode, editNode } from '../controllers/nodeController.js';
+
 
 const router = Router();
 
