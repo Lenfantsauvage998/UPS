@@ -1,7 +1,7 @@
 import mongoose, { mongo } from "mongoose";
 
 const nodeSchema = new mongoose.Schema({
-    name: {
+    name1: {
         type: String,
         required: [true, 'El nombre es obligatorio'],
         trim: true
